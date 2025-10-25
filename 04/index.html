@@ -1,0 +1,480 @@
+<html>
+  <!-- Github Pages Link: https://anikanegii.github.io/cs460student/04/ -->
+  <!-- Screenshot: Attached -->
+  <!-- WebGPU Bonus: Yes -->
+  <!-- Discord Username: Navii -->
+  <!-- Credit / Acknowledgements: I used ChatGPT for the Bonus for effects and such -->
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <title>Default WebGL!</title>
+    <style>
+      html, body { 
+        background: url('https://cs460.org/assignments/04/bg.jpg');
+        background-size: cover;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden !important;  
+      }
+
+      #c {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <script type="text/javascript" src="https://cs460.org/js/glmatrix.js"></script>
+  
+  <script id="vertexshader" type="glsl">
+    attribute vec3 a_position;
+
+    uniform mat4 u_transform;
+
+    uniform float u_pointsize;
+
+    void main(void) {
+      vec4 final_position = u_transform * vec4( a_position, 1.);
+      gl_Position = final_position;
+      gl_PointSize = u_pointsize;
+    
+    }
+  </script>
+
+  <script id="fragmentshader" type="glsl">
+    precision mediump float;
+
+    uniform vec4 u_color;
+
+    void main(void) {
+
+      gl_FragColor = u_color;
+
+    }
+  </script>
+  
+  <script>
+
+    var c, gl;
+    var v_shader, f_shader, shaderprogram;
+    var vertices, indices, v_buffer, i_buffer;
+
+    window.onload = function() { 
+
+      //************************************************************//
+      //
+      // INITIALIZE WEBGL
+      //
+      c = document.getElementById( 'c' ); // setup canvas
+      c.width = window.innerWidth;
+      c.height = window.innerHeight;
+
+      gl = c.getContext( 'webgl' ); // setup GL context
+      gl.viewport(0, 0, c.width, c.height );
+
+
+      //************************************************************//
+      //
+      // SHADERS
+      //
+      v_shader = gl.createShader( gl.VERTEX_SHADER );
+      f_shader = gl.createShader( gl.FRAGMENT_SHADER );
+      
+      // compile vertex shader
+      gl.shaderSource( v_shader, document.getElementById( 'vertexshader' ).innerText );
+      gl.compileShader( v_shader );
+
+      if (!gl.getShaderParameter( v_shader, gl.COMPILE_STATUS)) {
+        console.log(gl.getShaderInfoLog( v_shader ));
+      }
+
+      // compile fragment shader
+      gl.shaderSource( f_shader, document.getElementById( 'fragmentshader' ).innerText );
+      gl.compileShader( f_shader );
+
+      if (!gl.getShaderParameter( f_shader, gl.COMPILE_STATUS)) {
+        console.log(gl.getShaderInfoLog( f_shader ));
+      }
+
+      // attach and link the shaders
+      shaderprogram = gl.createProgram();
+      gl.attachShader( shaderprogram, v_shader );
+      gl.attachShader( shaderprogram, f_shader );
+
+      gl.linkProgram( shaderprogram );
+
+      gl.useProgram( shaderprogram );
+
+
+      // create multiple all_fish
+      all_fish = [];
+      // all_fish.push(createFish(new Float32Array([-.2,-.2,0]), new Float32Array([0.2,0.6,1.0,1.])));
+      all_fish.push( createFish( [0, 0, 0], [1,0,0,1], 1, -1) );
+
+      for (let i = 0; i < 100; i++) {
+        let random_color = new Float32Array([Math.random(), Math.random(), Math.random(), 1.]);
+        let random_offset = new Float32Array([Math.random() - Math.random(), Math.random() - Math.random(), 0]);
+        let random_scale = Math.random() * 0.3;
+        all_fish.push(createFish(random_offset, random_color, random_scale, 1));
+        }
+
+      animate();
+
+    };
+
+
+    function createFish(offset, color, scale = 1, direction = 1) {
+
+
+      //************************************************************//
+      //
+      // CREATE GEOMETRY
+      //
+      var vertices = new Float32Array( [
+                                    0.5, 0.0, 0.0, // 0: nose
+                                    0.2, 0.25, 0.0, // 1: upper body
+                                    -0.2, 0.15, 0.0, // 2: upper tail base
+                                    -0.4, 0.3, 0.0, // 3: upper tail tip
+                                    -0.4, -0.3, 0.0, // 4: lower tail tip
+                                    -0.2, -0.15, 0.0, // 5: lower tail base
+                                    0.2, -0.25, 0.0 // 6: lower body
+                                    ] ); 
+
+      // now use indices
+      var indices = new Uint8Array( [
+                                    0, 1, 6, // main body
+                                    1, 2, 6, // upper mid-body
+                                    2, 5, 6, // rear body
+                                    2, 3, 5, // tail top
+                                    3, 4, 5 // tail fin
+                                    ] ); 
+
+      var v_buffer = gl.createBuffer(); // create
+      gl.bindBuffer( gl.ARRAY_BUFFER, v_buffer ); // bind
+      gl.bufferData( gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW ); // put data in
+      gl.bindBuffer( gl.ARRAY_BUFFER, null ); // unbind
+
+      var i_buffer = gl.createBuffer(); // create
+      gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, i_buffer ); // bind
+      gl.bufferData( gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW ); // put data in
+      gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, null ); // unbind
+
+      var eye_vertex = new Float32Array([0.2, 0.2, 0.0]);
+      if (direction == -1) {
+            eye_vertex = new Float32Array([0.2, -0.2, 0.0]);
+            }
+      var eye_v_buffer = gl.createBuffer(); // create
+      gl.bindBuffer( gl.ARRAY_BUFFER, eye_v_buffer ); // bind
+      gl.bufferData( gl.ARRAY_BUFFER, eye_vertex, gl.STATIC_DRAW ); // put data in
+      gl.bindBuffer( gl.ARRAY_BUFFER, null ); // unbind
+
+      return [v_buffer, i_buffer, eye_v_buffer, color, offset, scale, direction];
+
+    };
+
+    var step_x = .01;
+    var step_y = .01;
+    var direction = -1;
+
+    function animate() {
+
+      requestAnimationFrame(animate);
+
+      gl.clearColor( 0., 0., 0., 0.)
+      gl.clear( gl.COLOR_BUFFER_BIT );
+      gl.enable(gl.BLEND);
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.disable(gl.DEPTH_TEST);
+
+      for( var r = 0; r < all_fish.length; r++ ) {
+        // current_buffers is a list of [v_buffer, i_buffer]-pairs
+        var current_buffers = all_fish[r];
+        var current_v_buffer = current_buffers[0];
+        var current_i_buffer = current_buffers[1];
+        var current_eye_v_buffer = current_buffers[2];
+        var current_color = current_buffers[3];
+        var current_offset = current_buffers[4];
+        var current_scale = current_buffers[5];
+        var current_direction = current_buffers[6];
+
+        current_offset[0] += 0.01;
+        current_offset[1] += 0.1 * Math.random();
+        current_offset[1] -= 0.1 * Math.random();
+
+        if (current_offset[0] >= 1.0) {
+        current_direction = -1;
+        }
+        current_offset[0] *= current_direction;
+                
+
+
+
+        //************************************************************//
+        //
+        // CONNECT SHADER WITH GEOMETRY
+        //
+        
+        gl.bindBuffer( gl.ARRAY_BUFFER, current_v_buffer );
+
+        gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, current_i_buffer );
+
+        // find the attribute in the shader source
+        var a_position = gl.getAttribLocation( shaderprogram, 'a_position' );
+
+        gl.vertexAttribPointer( a_position, 3, gl.FLOAT, false, 0, 0 );
+
+        gl.enableVertexAttribArray ( a_position );
+
+        // Uni for body
+        var u_transform = gl.getUniformLocation(shaderprogram, 'u_transform');
+
+        theta = Math.random()*10 * Math.PI/180; // convert 0..10 degrees to radians
+
+        transform = [current_direction*current_scale*Math.cos(theta), Math.sin(theta), 0, 0,
+                     -Math.sin(theta), current_direction*current_scale*Math.cos(theta), 0, 0,
+                     0, 0, current_direction*current_scale*1, 0,
+                     current_offset[0], current_offset[1], current_offset[2], 1];
+
+        gl.uniformMatrix4fv(u_transform, false, new Float32Array(transform));
+
+
+        var u_color = gl.getUniformLocation( shaderprogram, 'u_color' );
+        gl.uniform4fv(u_color, current_color);
+        t = performance.now() * 0.001;
+        a = 0.6 + 0.4 * Math.sin(t * 2.0); // 0.2..1.0
+        current_color = new Float32Array([
+        0.3 + 0.2*Math.sin(t + 0.0),
+        0.6 + 0.2*Math.sin(t + 2.0),
+        0.9 + 0.1*Math.sin(t + 4.0),
+        a
+        ]);
+
+if (r == 0) {
+// the large fish aka. first object should still be red!
+current_color = [1,0,0,.7];
+}
+gl.uniform4fv( u_color, current_color );
+
+        gl.drawElements( gl.TRIANGLES, 15, gl.UNSIGNED_BYTE, 0)
+
+        // EYEE
+        gl.uniform4fv ( u_color, new Float32Array([0, 0, 0, .5]) );
+
+        u_pointsize = gl.getUniformLocation( shaderprogram, 'u_pointsize' );
+
+        gl.uniform1fv( u_pointsize, new Float32Array([current_scale*20.]));
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, current_eye_v_buffer); 
+        gl.enableVertexAttribArray ( a_position );
+        gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_position);
+        gl.drawArrays( gl.POINTS, 0, 1);
+      }
+
+
+    };
+
+  </script>
+
+  <iframe id="bg-music" width="0" height="0" frameborder="0" allow="autoplay"></iframe>
+<button id="startButton">Start</button>
+<h1 id="partyText">🎉 PARTY TIME! 🎉</h1>
+<div class="fishGif" id="fishTopLeft"></div>
+<div class="fishGif" id="fishTopRight"></div>
+<div class="fishGif" id="fishBottomLeft"></div>
+<div class="fishGif" id="fishBottomRight"></div>
+<div id="wowContainer"></div>
+<script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #001f3f, #000000);
+    transition: background 0.2s ease;
+  }
+
+  @keyframes backgroundFlash {
+    0%   { background: radial-gradient(circle at center, #001F3F, #000000); }
+    10%  { background: radial-gradient(circle at center, #0040FF, #00001A); }
+    20%  { background: radial-gradient(circle at center, #00FFFF, #001133); }
+    40%  { background: radial-gradient(circle at center, #00FF99, #000000); }
+    60%  { background: radial-gradient(circle at center, #FF00FF, #000010); }
+    80%  { background: radial-gradient(circle at center, #00FFFF, #001133); }
+    100% { background: radial-gradient(circle at center, #001F3F, #000000); }
+  }
+
+  #startButton {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 12px 28px;
+    font-size: 1.2rem;
+    font-family: sans-serif;
+    color: white;
+    background: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.5s ease;
+    z-index: 10;
+  }
+
+  #startButton:hover {
+    background: #00aaff;
+  }
+
+  #partyText {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: "Impact", "Arial Black", sans-serif;
+    font-size: 12vw;
+    font-weight: bold;
+    color: #fff;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow:
+      0 0 20px #00ffff,
+      0 0 40px #ff00ff,
+      0 0 80px #ffff00,
+      2px 2px 0 #ff0000,
+      -2px -2px 0 #00ff00;
+    opacity: 0;
+    transition: opacity 2s ease;
+    z-index: 5;
+    animation: spinText 1.5s linear infinite, flashText 0.4s infinite alternate;
+  }
+
+  #partyText.visible {
+    opacity: 1;
+  }
+
+  @keyframes spinText {
+    0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.15); }
+    100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+  }
+
+  @keyframes flashText {
+    0% { filter: brightness(1) hue-rotate(0deg); }
+    50% { filter: brightness(3) hue-rotate(180deg); }
+    100% { filter: brightness(1) hue-rotate(360deg); }
+  }
+
+  .fishGif {
+    position: fixed;
+    width: 150px;
+    height: 150px;
+    opacity: 0;
+    transition: opacity 2s ease-in;
+    mix-blend-mode: screen;
+    pointer-events: none;
+  }
+
+  #fishTopLeft { top: 5%; left: 5%; }
+  #fishTopRight { top: 5%; right: 5%; transform: scaleX(-1); }
+  #fishBottomLeft { bottom: 5%; left: 5%; }
+  #fishBottomRight { bottom: 5%; right: 5%; transform: scaleX(-1); }
+
+  .visible {
+    opacity: 1;
+  }
+
+  /* WOOWWW! floating text */
+  .wow {
+    position: fixed;
+    font-family: "Comic Sans MS", "Impact", sans-serif;
+    font-size: 2rem;
+    color: white;
+    text-shadow:
+      0 0 5px #00ffff,
+      0 0 10px #ff00ff,
+      0 0 15px #ffff00;
+    animation: wowFloat 3s ease-in-out infinite alternate, wowFlash 1s infinite;
+    pointer-events: none;
+    opacity: 0.9;
+    z-index: 3;
+  }
+
+  @keyframes wowFloat {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(-20px) rotate(10deg); }
+  }
+
+  @keyframes wowFlash {
+    0% { opacity: 1; filter: hue-rotate(0deg); }
+    50% { opacity: 0.6; filter: hue-rotate(180deg); }
+    100% { opacity: 1; filter: hue-rotate(360deg); }
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+<script>
+  const fishURL = "https://tenor.com/view/fish-groove-dancing-fish-groove-grooving-fish-gif-19920578";
+  document.querySelectorAll('.fishGif').forEach(div => {
+    div.innerHTML = `
+      <div class="tenor-gif-embed" data-postid="19920578" data-share-method="host" data-aspect-ratio="1" data-width="150px">
+        <a href="${fishURL}">Fish Groove Sticker</a>
+      </div>`;
+  });
+
+  document.getElementById('startButton').addEventListener('click', () => {
+    const videoId = "PDJLvF1dUek";
+    const iframe = document.getElementById('bg-music');
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}`;
+    const btn = document.getElementById('startButton');
+    btn.style.opacity = 0;
+    setTimeout(() => btn.remove(), 1000);
+    document.body.style.animation = 'backgroundFlash 3s infinite linear';
+    document.querySelectorAll('.fishGif').forEach(div => div.classList.add('visible'));
+    document.getElementById('partyText').classList.add('visible');
+    spawnWoows(40);
+    startInfiniteConfetti();
+  });
+
+  function startInfiniteConfetti() {
+    (function frame() {
+      confetti({
+        particleCount: 6,
+        startVelocity: 25,
+        spread: 360,
+        ticks: 90,
+        origin: { x: Math.random(), y: Math.random() - 0.2 },
+        colors: ['#00ffff', '#00ff99', '#007bff', '#ff00ff', '#ffcc00']
+      });
+      requestAnimationFrame(frame);
+    })();
+  }
+
+  // Spawn random "WOOWWW!" text
+  function spawnWoows(count) {
+    const container = document.getElementById('wowContainer');
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'wow';
+      el.textContent = 'WOOWWW!';
+      el.style.top = Math.random() * 100 + 'vh';
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.fontSize = (1.5 + Math.random() * 1.5) + 'rem';
+      el.style.animationDelay = (Math.random() * 2) + 's';
+      container.appendChild(el);
+    }
+  }
+</script>
+
+
+
+  <body>
+    <canvas id="c"></canvas>
+
+
+  </body>
+</html>
