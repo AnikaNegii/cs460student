@@ -73,7 +73,7 @@
         var zNear = 0.1;
         var zFar = 10000;
         camera = new THREE.PerspectiveCamera(fov, ratio, zNear, zFar);
-        camera.position.set(0, 10, 0);
+        camera.position.set(0, 5, 20);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -103,7 +103,7 @@
         sceneui.addBinding(ambientLight, 'color', {label: 'AmbientLight Color'});
 
         loader = new GLTFLoader();
-        loader.load( 'poly_meow.glb', function ( gltf ) {
+        loader.load( 'og_meow.glb', function ( gltf ) {
           var poly = gltf.scenes[0].children[0];
           
           poly.scale.x = 10;
@@ -128,7 +128,7 @@
           });
         });
 
-        loader.load( 'meow.glb', function ( gltf ) {
+        loader.load( 'clean_meow.glb', function ( gltf ) {
           var blender = gltf.scenes[0].children[0];
           
           blender.scale.x = 10;
